@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "穗浪 v6 · 老板娘角色包",
+  "type": "object",
+  "required": [
+    "format",
+    "version",
+    "id",
+    "name",
+    "role",
+    "portrait",
+    "lines"
+  ],
+  "properties": {
+    "format": {
+      "const": "suilang-boss-pack"
+    },
+    "version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{1,39}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 24
+    },
+    "role": {
+      "type": "string",
+      "maxLength": 36
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 36
+    },
+    "en": {
+      "type": "string",
+      "maxLength": 48
+    },
+    "accent": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "portrait": {
+      "type": "string",
+      "description": "压缩包内的立绘文件名，例如 portrait.png"
+    },
+    "lines": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 80
+      }
+    },
+    "author": {
+      "type": "string",
+      "maxLength": 28
+    },
+    "license": {
+      "type": "string",
+      "maxLength": 32
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 90
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "rankLines": {
+      "type": "object",
+      "description": "可选：S/A/B/C/D 五档单人结算评语；缺省使用通用评语。",
+      "properties": {
+        "S": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "A": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "B": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "C": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "D": {
+          "type": "string",
+          "maxLength": 80
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

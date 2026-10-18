@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b1208">
+<title>穗浪 · 丰饶之刻</title>
+<meta name="description" content="穗浪：一场与黄昏的收割。滑动鼠标割下金色麦浪，在六十秒的黄昏里，收下属于你的丰饶。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23241708'/%3E%3Cpath d='M31 54V23' stroke='%23f2c15c' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M31 30c-9 0-13-5-13-12 8 0 13 5 13 12zm0 0c9 0 13-5 13-12-8 0-13 5-13 12z' fill='%23f2c15c'/%3E%3Cpath d='M31 44c-7 0-10-4-10-10 6 0 10 4 10 10zm0 0c7 0 10-4 10-10-6 0-10 4-10 10z' fill='%23e0a844'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app" data-mode="menu">
+  <canvas id="stage" aria-label="黄昏的金色麦田。按住并滑动鼠标或手指，划过麦穗进行收割。"></canvas>
+
+  <!-- ===================== HUD ===================== -->
+  <header id="hud" class="hud hud--off" aria-hidden="true">
+    <div class="hud-top">
+      <div class="hud-block">
+        <div class="hud-label">收成 <em>HARVEST</em></div>
+        <div class="score-row">
+          <span id="score">0</span><span class="score-unit">穗</span>
+        </div>
+        <div id="combo" class="combo">
+          <div class="combo-copy">
+            <span class="combo-cn">连斩</span>
+            <span id="comboCount" class="combo-count">0</span>
+          </div>
+          <div class="combo-mult"><span>×</span><b id="comboMult">1.0</b></div>
+          <div class="combo-meter"><i id="comboFill"></i></div>
+        </div>
+      </div>
+
+      <div class="wind" id="wind">
+        <span class="wind-cn">风</span>
+        <span id="windArrow" class="wind-arrow">→</span>
+        <span id="windText" class="wind-text">西风 · 轻</span>
+      </div>
+
+      <div class="hud-block hud-right">
+        <div class="hud-label">日暮 <em>SUNSET</em></div>
+        <div class="timer-row"><span id="timer">01:00</span></div>
+        <div class="sun-rail" aria-hidden="true">
+          <i class="rail-line"></i>
+          <i id="sunRailFill" class="rail-fill"></i>
+          <i id="sunDot" class="rail-sun"></i>
+        </div>
+        <div class="hud-buttons">
+          <button id="btnPause" class="icon-btn" type="button" title="暂停（P）" aria-label="暂停">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5.4 3v10M10.6 3v10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </button>
+          <button id="btnMute" class="icon-btn" type="button" title="静音（M）" aria-label="静音">
+            <svg class="ico-sound" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <path d="M3 7v4h2.6L9.5 14V4L5.6 7H3Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+              <path d="M12 6.2c1.2 1.5 1.2 4.1 0 5.6M14.2 4c2.2 2.6 2.2 7.4 0 10" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+            </svg>
+            <svg class="ico-muted" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <path d="M3 7v4h2.6L9.5 14V4L5.6 7H3Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+              <path d="m12 7 4 4m0-4-4 4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hud-bottom">
+      <div class="hud-tool" id="hudTool" aria-hidden="true">
+        <span class="hud-tool-icon" id="hudToolIcon"></span>
+        <span class="hud-tool-copy"><b id="hudToolName">旧镰刀</b><em id="hudToolEffect">范围 ×1.0</em></span>
+      </div>
+      <div class="hint" id="hint"><i></i><span>滑动鼠标 · 划过麦穗 · 开镰</span></div>
+
+      <div class="frenzy" id="frenzy">
+        <div class="frenzy-head">
+          <span class="frenzy-cn">丰饶之刻</span>
+          <span id="frenzyState" class="frenzy-state">静候金风</span>
+        </div>
+        <div class="frenzy-bar"><i id="frenzyFill"></i><b class="frenzy-glow"></b></div>
+        <div class="frenzy-rule" id="furyRule">将在黄昏中随机降临 · 每 25 穗 +0.05 秒</div>
+        <button id="btnBlessing" class="frenzy-btn blessing-btn" type="button" hidden>
+          <kbd>F</kbd><span>来自黍的祝福</span><em id="blessingCount">×1</em>
+        </button>
+      </div>
+
+      <div class="hud-credit">SUI&nbsp;LANG</div>
+    </div>
+  </header>
+
+  <!-- ===================== PK HUD ===================== -->
+  <div id="pkHud" class="pk-hud hidden" aria-hidden="true">
+    <div class="pk-top">
+      <div class="pk-player pk-p1">
+        <span class="pk-tag">P1 <em>W A S D</em></span>
+        <b id="pkScore1">0</b>
+        <span class="pk-combo" id="pkCombo1">连斩 ×1.0</span>
+      </div>
+      <div class="pk-center">
+        <span class="pk-label">同屏对决</span>
+        <span class="pk-timer" id="pkTimer">01:00</span>
+        <span class="pk-map-label" id="pkMapName">麦田</span>
+        <button id="pkPause" class="pk-pause" type="button" aria-label="暂停对决">Ⅱ</button>
+      </div>
+      <div class="pk-player pk-p2">
+        <span class="pk-tag">P2 <em>↑ ↓ ← →</em></span>
+        <b id="pkScore2">0</b>
+        <span class="pk-combo" id="pkCombo2">连斩 ×1.0</span>
+      </div>
+    </div>
+    <div class="pk-fury">
+      <div class="pk-fury-head"><span>丰饶之刻 <i>SHARED</i></span><b id="pkFuryState">静候金风</b></div>
+      <div class="pk-fury-bar"><i id="pkFuryFill"></i></div>
+      <div class="pk-fury-rule" id="pkFuryRule">每 25 穗 +0.05 秒</div>
+    </div>
+    <div class="pk-foot">WASD / 方向键移动 · 划过作物得分 · 金风共享 · Esc / P 暂停</div>
+  </div>
+
+  <!-- ===================== cinematic caption ===================== -->
+  <div id="caption" class="caption" aria-hidden="true">
+    <span class="caption-k" id="captionK">北纬 37° · 麦熟时分</span>
+    <span class="caption-v" id="captionV">麦浪把黄昏推向了岸边</span>
+  </div>
+
+  <!-- ===================== announcement ===================== -->
+  <div id="announce" class="announce" aria-live="polite">
+    <span class="announce-cn" id="announceCn">丰饶之刻</span>
+    <span class="announce-en" id="announceEn">THE GOLDEN GUST</span>
+  </div>
+  <div id="notice" class="notice" aria-live="polite"></div>
+
+  <!-- ===================== MENU ===================== -->
+  <section id="menu" class="screen menu" aria-label="游戏开始">
+    <div class="menu-shade" aria-hidden="true"></div>
+    <div class="menu-grid">
+      <div class="menu-main">
+        <div class="eyebrow reveal" style="--d:.05s"><i class="eyebrow-dot"></i>A HARVEST INTERLUDE · 丰饶之野</div>
+
+        <div class="title-wrap reveal" style="--d:.16s">
+          <h1 class="title"><span class="title-char">穗</span><span class="title-char">浪</span><span class="title-seal" aria-hidden="true">丰</span></h1>
+          <div class="title-en">SUÌ&nbsp;&nbsp;LÀNG</div>
+        </div>
+
+        <p class="tagline reveal" id="taglineText" style="--d:.3s">黄昏把田野熬成蜜，<br>你只需挥一挥手。</p>
+        <p class="menu-mobile-rules reveal" style="--d:.36s">滑动收割 · 连斩成倍 · 随机丰饶</p>
+
+        <div class="menu-cta reveal" style="--d:.44s">
+          <button id="btnStart" class="btn-primary" type="button">
+            <span class="btn-corners" aria-hidden="true"></span>
+            <span class="btn-label">开镰</span>
+            <span class="btn-meta">ENTER · 六十秒</span>
+            <span class="btn-sheen" aria-hidden="true"></span>
+          </button>
+          <button id="btnShop" class="btn-tools" type="button" aria-label="打开农具小铺">
+            <span class="tools-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4.8 19.2 12 12" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+                <path d="M12 12c2.7 2.5 6.8 1.9 8.7-1.1-2.8-.8-6-.4-8.7 1.1Z" fill="currentColor" opacity=".85"/>
+                <path d="M3.8 20c1.4-.2 2.4-1 2.9-2.3" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="tools-copy"><em>农具小铺</em><b>丰收印记 <i id="coinMenu">0</i></b></span>
+          </button>
+          <button id="btnPK" class="btn-duel" type="button" aria-label="打开双人同屏对决">
+            <span class="duel-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M5 19 15 7M9 21 19 9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" opacity=".75"/>
+                <path d="M15 7c2.1 1.7 5.2 1.4 6.6-.9-2.3-.5-4.8-.1-6.6.9ZM9.2 21c2.1 1.7 5.2 1.4 6.6-.9-2.3-.5-4.8-.1-6.6.9Z" fill="currentColor" opacity=".8"/>
+              </svg>
+            </span>
+            <span class="duel-copy"><em>双人同屏</em><b>PK · 旧镰刀</b></span>
+          </button>
+          <div class="best-block">
+            <span class="best-label">本季最佳</span>
+            <span class="best-value"><b id="bestMenu">—</b><i>穗</i></span>
+          </div>
+        </div>
+        <div class="menu-meta-row reveal" style="--d:.52s">
+          <div class="menu-maps" role="group" aria-label="选择地图">
+            <span class="menu-meta-label">田埂</span>
+            <button id="mapWheat" class="map-chip is-on" type="button" data-map="wheat"><i class="map-dot dot-wheat"></i>麦田</button>
+            <button id="mapRice" class="map-chip" type="button" data-map="rice"><i class="map-dot dot-rice"></i>稻田</button>
+          </div>
+          <div class="menu-loadout"><span>当前农具</span><b id="menuTool">旧镰刀</b></div>
+          <button id="btnHistory" class="menu-history" type="button" aria-label="打开农事记录">
+            <span>农事记录</span><b id="historySummary">还没有收成</b>
+          </button>
+        </div>
+      </div>
+
+      <aside class="menu-aside reveal" style="--d:.58s" aria-label="玩法要诀">
+        <div class="aside-head"><span>收割要诀</span><i></i></div>
+        <ol class="rules">
+          <li>
+            <span class="rule-index">壹</span>
+            <div><h3>滑动即割</h3><p>鼠标或指尖划过穗子，镰刀不必落点。</p></div>
+          </li>
+          <li>
+            <span class="rule-index">贰</span>
+            <div><h3>连斩成倍</h3><p>两息之内不断挥镰，收成逐步翻涌。</p></div>
+          </li>
+          <li>
+            <span class="rule-index">叁</span>
+            <div><h3>静候金风</h3><p>丰饶之刻会在 20–40 秒间随机降临；每收割 25 穗，多留 0.05 秒。</p></div>
+          </li>
+        </ol>
+        <div class="aside-foot">
+          <span>HARVEST AT DUSK</span>
+          <span>鼠标 / 触屏 · 建议开启声音</span>
+        </div>
+      </aside>
+    </div>
+    <div class="menu-side" id="menuSideLabel" aria-hidden="true">金 色 丰 收 · 卷 一</div>
+    <div class="menu-footline" aria-hidden="true"></div>
+  </section>
+
+  <!-- ===================== PAUSE ===================== -->
+  <section id="pause" class="screen pause hidden" aria-label="暂停">
+    <div class="pause-panel">
+      <div class="eyebrow"><i class="eyebrow-dot"></i>INTERMISSION · 暂歇</div>
+      <h2 class="pause-title">风吹得正好</h2>
+      <p class="pause-sub">麦子不急，你也不用。</p>
+      <div class="pause-actions">
+        <button id="btnResume" class="btn-primary" type="button">
+          <span class="btn-label">继续收割</span>
+          <span class="btn-meta">P · ESC</span>
+          <span class="btn-sheen" aria-hidden="true"></span>
+        </button>
+        <button id="btnRestart" class="btn-ghost" type="button">重新开镰</button>
+        <button id="btnHome" class="btn-ghost" type="button">回到田埂</button>
+      </div>
+      <div class="pause-foot">M 静音 · 本局不会被中断</div>
+    </div>
+  </section>
+
+  <!-- ===================== END ===================== -->
+  <section id="end" class="screen end hidden" aria-label="本局结算">
+    <div class="end-shade" aria-hidden="true"></div>
+    <div class="end-panel">
+      <div class="eyebrow end-eyebrow"><i class="eyebrow-dot"></i>SUNSET · 日暮收工</div>
+
+      <div class="end-head">
+        <div class="rank-wrap">
+          <div id="rankSeal" class="rank-seal"><span id="rankLetter">A</span><i></i></div>
+          <span class="rank-caption">收成评级</span>
+        </div>
+        <div class="end-titles">
+          <h2 class="end-title">日暮收工</h2>
+          <div id="rankTitle" class="rank-name">金牌麦客</div>
+        </div>
+      </div>
+
+      <div class="end-score-row">
+        <span id="finalScore" class="end-score">0</span>
+        <span class="end-score-unit">穗</span>
+        <span id="newBest" class="new-best hidden">新 纪 录</span>
+      </div>
+
+      <div class="end-stats">
+        <div><span>最高连斩</span><b id="statCombo">0</b></div>
+        <div><span>黄金麦穗</span><b id="statGolden">0</b></div>
+        <div><span>本季最佳</span><b id="bestEnd">0</b></div>
+      </div>
+
+      <div class="end-coins">
+        <div class="end-coins-main"><span>丰收印记</span><b id="coinsEarned">+0</b></div>
+        <div class="end-coins-sub">本季余额 <i id="coinBalance">0</i></div>
+      </div>
+
+      <blockquote id="endQuote" class="end-quote">风把整片田野，都交给了你的镰刀。</blockquote>
+
+      <div id="endBossEval" class="end-boss-eval">
+        <div class="end-boss-portrait"><img id="endBossPortrait" src="assets/boss.png" alt=""></div>
+        <div class="end-boss-bubble">
+          <div class="end-boss-head">
+            <span id="endBossName">穗</span><i>的收成评语</i>
+            <b id="endBossGrade">A</b>
+          </div>
+          <p id="endBossComment">割得漂亮。再慢一点，就能听见稻子道谢了。</p>
+        </div>
+      </div>
+
+      <div class="end-actions">
+        <button id="btnReplay" class="btn-primary" type="button">
+          <span class="btn-label">再割一垄</span>
+          <span class="btn-meta">ENTER</span>
+          <span class="btn-sheen" aria-hidden="true"></span>
+        </button>
+        <button id="btnShopEnd" class="btn-ghost" type="button">农具小铺</button>
+        <button id="btnHome2" class="btn-ghost" type="button">回到田埂</button>
+      </div>
+
+      <div class="end-foot">
+        <span class="end-poem">用六十秒，与黄昏交换一整片田野。</span>
+        <span class="end-sign">穗浪 · 丰饶之刻</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SHOP ===================== -->
+  <section id="shop" class="screen shop hidden" aria-label="农具小铺">
+    <div class="shop-bg" aria-hidden="true">
+      <div class="shop-window"><i class="shop-window-sun"></i><i class="shop-window-field"></i></div>
+      <div class="shop-wall"></div>
+      <div class="shop-beam shop-beam-l"></div>
+      <div class="shop-beam shop-beam-r"></div>
+      <div class="shop-shelf">
+        <i class="shelf-line s1"></i><i class="shelf-line s2"></i>
+        <i class="jar jar1"></i><i class="jar jar2"></i><i class="jar jar3"></i>
+        <i class="gourd"></i><i class="bundle"></i>
+      </div>
+      <div class="shop-hang">
+        <svg class="hang-sickle" viewBox="0 0 70 90" aria-hidden="true">
+          <path d="M18 8v42" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          <path d="M18 50c18 20 44 12 49-7-17-5-35-3-49 7Z" fill="currentColor"/>
+        </svg>
+        <svg class="hang-rake" viewBox="0 0 80 100" aria-hidden="true">
+          <path d="M40 16v68M20 16h40M20 16v13M28 16v10M36 16v13M44 16v10M52 16v13M60 16v10" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/>
+        </svg>
+        <span class="hang-rope"></span>
+      </div>
+      <div class="shop-lantern lantern-l"><i></i><b></b><span></span></div>
+      <div class="shop-lantern lantern-r"><i></i><b></b><span></span></div>
+      <div class="shop-talisman talisman-l">丰</div>
+      <div class="shop-talisman talisman-r">穗</div>
+      <div class="shop-sign"><span>丰饶小铺</span><em>FARM TOOLS</em></div>
+      <div class="shop-counter">
+        <i class="counter-edge"></i>
+        <i class="grain-sack sack-a"></i><i class="grain-sack sack-b"></i>
+        <i class="grain-bowl"></i><i class="counter-ladle"></i>
+      </div>
+      <div class="shop-dust"></div>
+    </div>
+
+    <button id="btnShopBack" class="shop-back" type="button">← 回到田埂</button>
+
+    <div class="shop-head">
+      <div class="eyebrow"><i class="eyebrow-dot"></i>FARM TOOLS · 丰饶小铺</div>
+      <h2>农具</h2>
+      <p>把手里的镰刀，换成你喜欢的黄昏。</p>
+      <button id="btnBossSwitchTop" class="shop-boss-quick" type="button">老板娘 · <b id="shopBossNameTop">穗</b> · 更换 ›</button>
+    </div>
+
+    <div class="shop-wallet" aria-label="丰收印记余额">
+      <span>丰收印记</span><b id="coinShop">0</b><i class="coin-mark">丰</i>
+    </div>
+
+    <div class="shop-panel">
+      <div class="shop-panel-head"><span>柜台</span><em>购买 · 解锁 · 装备</em></div>
+      <div class="shop-loaded">
+        <span>当前农具</span><b id="currentTool">旧镰刀</b>
+        <button id="btnUnequip" type="button">卸下</button>
+      </div>
+      <div id="toolList" class="tool-list" role="list"></div>
+      <div class="shop-foot">
+        <span class="shop-foot-note">购买后永久解锁 · 农具可随时更换 · 消耗品用后需重新购买</span>
+        <button id="btnBossSwitch" class="shop-boss-switch" type="button" aria-label="更换老板娘">
+          <span class="boss-mini"><img id="shopBossMini" src="assets/boss.png" alt="" draggable="false"></span>
+          <span class="boss-mini-text"><i>老板娘</i><b id="shopBossName">穗</b><em>更换 ›</em></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="shop-character" id="shopCharacter" role="button" tabindex="0" aria-label="和老板娘说话">
+      <span class="char-aura" aria-hidden="true"></span>
+      <img id="shopPortrait" src="assets/boss.png" alt="农具小铺老板娘穗" draggable="false">
+      <span class="char-hint">点击她 · 听一句</span>
+      <span class="char-ground" aria-hidden="true"></span>
+    </div>
+
+    <div class="shop-dialogue" id="shopDialogue">
+      <div class="dialogue-head"><span id="shopBossName2">穗</span><i id="shopBossRole">THE FOURTEENTH · 老板娘</i></div>
+      <p id="shopLine">……</p>
+      <span class="dialogue-hint">再点一下</span>
+    </div>
+
+    <div class="shop-toast" id="shopToast" aria-live="polite"></div>
+
+    <div id="bossPanel" class="boss-panel hidden" role="dialog" aria-modal="true" aria-label="更换老板娘">
+      <div class="boss-backdrop" id="bossBackdrop"></div>
+      <section class="boss-card">
+        <header class="boss-head">
+          <div><span class="eyebrow"><i class="eyebrow-dot"></i>SHOPKEEPER · 老板娘</span><h2>今天谁看店？</h2></div>
+          <button id="btnBossClose" class="boss-close" type="button" aria-label="关闭">×</button>
+        </header>
+        <p class="boss-intro">选择一位老板娘，或导入玩家自制的原创角色包。所有角色包只在本地读取，不上传。</p>
+        <div id="bossList" class="boss-list" role="list"></div>
+        <div class="boss-actions">
+          <label class="boss-import" for="bossFile">导入 .zip 角色包</label>
+          <input id="bossFile" type="file" accept=".zip,application/zip" hidden>
+          <a class="boss-kit" id="bossKitLink" href="docs/boss-pack-kit.zip" download>下载 AI 制作包</a>
+          <button id="btnBossDefault" class="boss-default" type="button">恢复默认</button>
+        </div>
+        <p class="boss-note">只支持原创或你拥有授权的角色。压缩包内不要放脚本；本作不提供、不内置任何第三方游戏角色素材。</p>
+      </section>
+    </div>
+  </section>
+
+  <!-- ===================== PK SETUP ===================== -->
+  <section id="pkSetup" class="screen pk-setup hidden" aria-label="双人同屏对决设置">
+    <div class="pk-setup-shade" aria-hidden="true"></div>
+    <div class="pk-setup-panel">
+      <button id="btnPKBack" class="pk-back" type="button">← 回到田埂</button>
+      <div class="eyebrow"><i class="eyebrow-dot"></i>LOCAL DUEL · 同屏对决</div>
+      <h2>一田，双镰</h2>
+      <p class="pk-setup-sub">同一片田，两把旧镰刀。只比这一局的收成。</p>
+      <div class="pk-controls">
+        <div class="pk-control p1"><span>P1</span><b>W A S D</b><em>左手 · 移动镰刀</em></div>
+        <div class="pk-versus">VS</div>
+        <div class="pk-control p2"><span>P2</span><b>↑ ↓ ← →</b><em>右手 · 移动镰刀</em></div>
+      </div>
+      <div class="pk-touch-hint"><b>双人同屏仅支持桌面键盘。</b>手机端不开放 PK 模式；单人模式仍可在手机上正常收割。</div>
+      <div class="pk-map-row">
+        <span>选择田垄</span>
+        <button id="pkMapWheat" class="map-chip is-on" type="button" data-map="wheat"><i class="map-dot dot-wheat"></i>麦田</button>
+        <button id="pkMapRice" class="map-chip" type="button" data-map="rice"><i class="map-dot dot-rice"></i>稻田</button>
+      </div>
+      <div class="pk-note">仅使用旧镰刀 · 无祝福 · 不计农事记录 / 丰收印记</div>
+      <button id="btnPKStart" class="btn-primary pk-start" type="button">
+        <span class="btn-corners" aria-hidden="true"></span>
+        <span class="btn-label">开始对决</span>
+        <span class="btn-meta">60 秒 · 同屏</span>
+        <span class="btn-sheen" aria-hidden="true"></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ===================== PK RESULT ===================== -->
+  <section id="pkEnd" class="screen pk-end hidden" aria-label="对决结果">
+    <div class="pk-end-shade" aria-hidden="true"></div>
+    <div class="pk-end-panel">
+      <div class="eyebrow"><i class="eyebrow-dot"></i>DUEL RESULT · 对决结束</div>
+      <h2 id="pkWinner">P1 胜</h2>
+      <p class="pk-end-sub" id="pkEndSub">麦田 · 60 秒</p>
+      <div class="pk-end-scores">
+        <div class="pk-end-player p1"><span>P1 · WASD</span><b id="pkEndScore1">0</b><em id="pkEndCombo1">最高连斩 · 0</em></div>
+        <div class="pk-end-split">VS</div>
+        <div class="pk-end-player p2"><span>P2 · ↑↓←→</span><b id="pkEndScore2">0</b><em id="pkEndCombo2">最高连斩 · 0</em></div>
+      </div>
+      <p class="pk-end-note">这一场只留在田里，不进农事记录，也不结算丰收印记。</p>
+      <div class="pk-end-actions">
+        <button id="btnPKAgain" class="btn-primary" type="button"><span class="btn-label">再战一局</span></button>
+        <button id="btnPKSwitch" class="btn-ghost" type="button">换地图</button>
+        <button id="btnPKHome" class="btn-ghost" type="button">回到田埂</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== HISTORY ===================== -->
+  <section id="history" class="screen history hidden" aria-label="农事记录">
+    <div class="history-shade" aria-hidden="true"></div>
+    <div class="history-panel">
+      <button id="btnHistoryBack" class="history-back" type="button">← 回到田埂</button>
+      <div class="history-head">
+        <div class="eyebrow"><i class="eyebrow-dot"></i>FARM RECORDS · 农事录</div>
+        <h2>田埂上的旧脚印</h2>
+        <p>每一场收成，都会留在这里。</p>
+      </div>
+      <div class="history-stats" id="historyStats"></div>
+      <div class="history-columns" aria-hidden="true">
+        <span>时间</span><span>田垄</span><span>收成</span><span>评级</span><span>印记</span><span>农具</span>
+      </div>
+      <div id="historyList" class="history-list"></div>
+      <div class="history-empty" id="historyEmpty">田埂上还没有脚印。去割一垄吧。</div>
+    </div>
+  </section>
+
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div id="rotateNote" class="rotate-note" aria-hidden="true">横屏的黄昏更辽阔 · 建议旋转设备</div>
+  <div id="debug" class="debug" aria-hidden="true"></div>
+</div>
+
+<script src="js/audio.js"></script>
+<script src="js/field.js"></script>
+<script src="js/rice-field.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/rice-scene.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
